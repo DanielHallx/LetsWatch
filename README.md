@@ -3,6 +3,7 @@
 <div align="center">
 
 # LetsWatch Media Server
+![logo.png](./new-nex-logo-image.png)
 
 **A high-performance independent media server with Emby-compatible APIs.**
 
