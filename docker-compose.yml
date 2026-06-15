@@ -1,0 +1,136 @@
+# LetsWatch — deployment compose for published images.
+#
+# This file pulls the pre-built, obfuscated images from GHCR. There is no source
+# build here: the license verifier key, mTLS activation credential and build
+# seeds are already baked into the image. You only supply runtime configuration.
+#
+# Quick start:
+#   1. cp .env.example .env   and fill in every empty value
+#   2. docker compose pull
+#   3. docker compose up -d
+#   4. Point your Emby-compatible client at http://<server-ip>:${LETSWATCH_HTTP_PORT}/emby
+#      and the admin UI at http://<server-ip>:${LETSWATCH_ADMIN_PORT}
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    container_name: letswatch-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${LETSWATCH_POSTGRES_DB:-letswatch}
+      POSTGRES_USER: ${LETSWATCH_POSTGRES_USER:-letswatch}
+      POSTGRES_PASSWORD: ${LETSWATCH_POSTGRES_PASSWORD:?set LETSWATCH_POSTGRES_PASSWORD to a strong database password}
+    volumes:
+      - letswatch-postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  redis:
+    image: redis:7-alpine
+    container_name: letswatch-redis
+    restart: unless-stopped
+    command: ["redis-server", "--save", "", "--appendonly", "no"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  letswatch:
+    image: ghcr.io/danielhallx/letswatch:${LETSWATCH_IMAGE_TAG:-latest}
+    container_name: letswatch-api
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    command:
+      - serve
+      - -addr
+      - :8080
+      - -database-url
+      - "postgres://${LETSWATCH_POSTGRES_USER:-letswatch}:${LETSWATCH_POSTGRES_PASSWORD:?set LETSWATCH_POSTGRES_PASSWORD to a strong database password}@postgres:5432/${LETSWATCH_POSTGRES_DB:-letswatch}?sslmode=disable"
+      - -media
+      - /srv/library
+      - -nginx-access-log
+      - /var/log/nginx/letswatch-stream-access.log
+      - -nginx-access-log-archive-dir
+      - /var/log/nginx/letswatch-stream-archive
+    environment:
+      LETSWATCH_USERNAME: ${LETSWATCH_USERNAME:?set LETSWATCH_USERNAME to the initial admin username}
+      LETSWATCH_PASSWORD: ${LETSWATCH_PASSWORD:?set LETSWATCH_PASSWORD to the initial admin password}
+      LETSWATCH_INTERNAL_TOKEN: ${LETSWATCH_INTERNAL_TOKEN:?set LETSWATCH_INTERNAL_TOKEN to a strong service token}
+      LETSWATCH_REDIS_URL: ${LETSWATCH_REDIS_URL:-redis://redis:6379/0}
+      LETSWATCH_REDIS_TOKEN_CACHE_TTL: ${LETSWATCH_REDIS_TOKEN_CACHE_TTL:-30s}
+      LETSWATCH_STREAM_TOKEN_SECRET: ${LETSWATCH_STREAM_TOKEN_SECRET:?set LETSWATCH_STREAM_TOKEN_SECRET to a strong signing secret}
+      LETSWATCH_STREAM_TOKEN_TTL: ${LETSWATCH_STREAM_TOKEN_TTL:-6h}
+      LETSWATCH_REQUIRE_STREAM_TOKEN: ${LETSWATCH_REQUIRE_STREAM_TOKEN:-true}
+      LETSWATCH_LICENSE_ID: ${LETSWATCH_LICENSE_ID:?set LETSWATCH_LICENSE_ID to the license id issued to you}
+      LETSWATCH_LICENSE_ACTIVATION_SECRET: ${LETSWATCH_LICENSE_ACTIVATION_SECRET:?set LETSWATCH_LICENSE_ACTIVATION_SECRET to the activation secret issued to you}
+      LETSWATCH_LICENSE_CACHE_FILE: ${LETSWATCH_LICENSE_CACHE_FILE:-/app/data/license-cache.json}
+      LETSWATCH_MEDIA_ROOT: /srv/library
+      LETSWATCH_SCAN_SOURCE: ${LETSWATCH_SCAN_SOURCE:-local}
+      LETSWATCH_RCLONE_REMOTE: ${LETSWATCH_RCLONE_REMOTE:-}
+      LETSWATCH_RCLONE_BINARY: ${LETSWATCH_RCLONE_BINARY:-rclone}
+      LETSWATCH_RCLONE_CHECKERS: ${LETSWATCH_RCLONE_CHECKERS:-8}
+      LETSWATCH_RCLONE_LIST_TIMEOUT: ${LETSWATCH_RCLONE_LIST_TIMEOUT:-30m}
+      LETSWATCH_RCLONE_SKIP_NFO: ${LETSWATCH_RCLONE_SKIP_NFO:-false}
+      LETSWATCH_SCAN_WORKERS: ${LETSWATCH_SCAN_WORKERS:-4}
+      LETSWATCH_STREAM_BASE_URL: ${LETSWATCH_STREAM_BASE_URL:-}
+      TZ: ${TZ:-Asia/Shanghai}
+    volumes:
+      # Host machine id is used to bind the license to this host.
+      - /etc/machine-id:/etc/machine-id:ro
+      - ${LETSWATCH_MEDIA_PATH:?set LETSWATCH_MEDIA_PATH to your host media directory}:/srv/library:ro
+      - letswatch-license-cache:/app/data
+      - letswatch-nginx-logs:/var/log/nginx
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O - http://127.0.0.1:8080/System/Ping >/dev/null"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  frontend:
+    image: ghcr.io/danielhallx/letswatch-frontend:${LETSWATCH_FRONTEND_IMAGE_TAG:-latest}
+    container_name: letswatch-frontend
+    restart: unless-stopped
+    depends_on:
+      - letswatch
+    environment:
+      # Server-side only: the admin UI proxies API calls to the LetsWatch server.
+      UPSTREAM_BASE_URL: ${LETSWATCH_FRONTEND_UPSTREAM:-http://letswatch:8080}
+      SESSION_SECRET: ${LETSWATCH_FRONTEND_SESSION_SECRET:?set LETSWATCH_FRONTEND_SESSION_SECRET (openssl rand -base64 32)}
+      SESSION_TTL_SECONDS: ${LETSWATCH_FRONTEND_SESSION_TTL:-28800}
+      NEXT_PUBLIC_ENV_LABEL: ${LETSWATCH_FRONTEND_ENV_LABEL:-}
+      TZ: ${TZ:-Asia/Shanghai}
+    ports:
+      - "${LETSWATCH_ADMIN_PORT:-18082}:3000"
+
+  nginx:
+    image: nginx:1.27-alpine
+    container_name: letswatch-nginx
+    restart: unless-stopped
+    depends_on:
+      - letswatch
+    command:
+      - /bin/sh
+      - -c
+      - while true; do /usr/local/bin/letswatch-nginx-logrotate; sleep 3600; done & exec nginx -g 'daemon off;'
+    ports:
+      - "${LETSWATCH_HTTP_PORT:-18081}:80"
+    volumes:
+      - ./deploy/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./deploy/nginx-logrotate.sh:/usr/local/bin/letswatch-nginx-logrotate:ro
+      - ${LETSWATCH_MEDIA_PATH:?set LETSWATCH_MEDIA_PATH to your host media directory}:/srv/library:ro
+      - letswatch-nginx-cache:/var/cache/nginx
+      - letswatch-nginx-logs:/var/log/nginx
+
+volumes:
+  letswatch-postgres-data:
+  letswatch-license-cache:
+  letswatch-nginx-cache:
+  letswatch-nginx-logs:

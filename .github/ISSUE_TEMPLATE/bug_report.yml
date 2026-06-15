@@ -1,0 +1,110 @@
+name: Bug Report
+description: Report an error, crash, playback failure, or client compatibility problem.
+title: "[Bug]: "
+labels:
+  - bug
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting a problem with LetsWatch.
+
+        Please **remove all secrets** (tokens, API keys, passwords, database
+        credentials, internal/private URLs) from logs and screenshots before posting.
+
+  - type: checkboxes
+    id: checklist
+    attributes:
+      label: Pre-check
+      options:
+        - label: I have searched existing issues and did not find a duplicate.
+          required: true
+        - label: I have removed tokens, passwords, and private URLs from anything I paste here.
+          required: true
+
+  - type: dropdown
+    id: category
+    attributes:
+      label: Category
+      options:
+        - Playback / streaming
+        - Client compatibility
+        - Emby API compatibility
+        - Library scan / metadata
+        - Admin UI
+        - Performance
+        - Deployment / Docker
+        - Other
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: LetsWatch image tag / version
+      placeholder: "Example: 0.1.0 or latest"
+    validations:
+      required: true
+
+  - type: input
+    id: client
+    attributes:
+      label: Client name and version
+      description: Only if the issue is client-related.
+      placeholder: "Example: Infuse 7.8 / Android client 1.2.3"
+    validations:
+      required: false
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: What did you expect to happen?
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: What actually happened?
+    validations:
+      required: true
+
+  - type: textarea
+    id: repro
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. ...
+        2. ...
+        3. ...
+    validations:
+      required: true
+
+  - type: input
+    id: endpoint
+    attributes:
+      label: Affected API endpoint
+      description: Optional. Provide only if relevant and safe to share.
+      placeholder: "Example: GET /emby/Users/{UserId}/Items/Latest"
+    validations:
+      required: false
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant logs
+      description: Secrets removed. This will be rendered as code.
+      render: text
+    validations:
+      required: false
+
+  - type: dropdown
+    id: deployment
+    attributes:
+      label: Deployment
+      options:
+        - docker compose (published images)
+        - Single docker run
+        - Other
+    validations:
+      required: false

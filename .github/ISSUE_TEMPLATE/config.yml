@@ -1,5 +1,8 @@
 blank_issues_enabled: false
 contact_links:
   - name: Read the issue guidelines
-    url: https://github.com/YOUR_NAME/YOUR_REPO#readme
+    url: https://github.com/DanielHallx/LetsWatch#readme
     about: Please read the README before opening a new issue.
+  - name: Deployment quick start
+    url: https://github.com/DanielHallx/LetsWatch#deployment
+    about: How to pull and run the published Docker images.

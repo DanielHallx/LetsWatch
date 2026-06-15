@@ -29,7 +29,56 @@
 
 It is built as an independent server implementation and provides compatibility with selected **Emby API** behavior to support compatible clients and workflows.
 
-This repository is used as the public issue tracker for LetsWatch.
+This repository is used as the public issue tracker and deployment guide for LetsWatch. The server is distributed as pre-built Docker images; the source code is not public.
+
+---
+
+## Deployment
+
+LetsWatch is published as multi-architecture Docker images (`linux/amd64`, `linux/arm64`) on GitHub Container Registry:
+
+| Image | Purpose |
+|---|---|
+| `ghcr.io/danielhallx/letswatch` | Media server (Emby-compatible API) |
+| `ghcr.io/danielhallx/letswatch-frontend` | Admin web UI |
+
+### Requirements
+
+- Docker Engine 24+ with the Compose plugin
+- A media library already organized by MoviePilot (NFO + poster/fanart)
+- A license id and activation secret issued to you
+
+### Quick start
+
+```bash
+# 1. Get the deployment files
+git clone https://github.com/DanielHallx/LetsWatch.git
+cd LetsWatch
+
+# 2. Configure
+cp .env.example .env
+#    Edit .env and fill in every empty value:
+#      - LETSWATCH_MEDIA_PATH          your host media directory
+#      - LETSWATCH_POSTGRES_PASSWORD   strong DB password
+#      - LETSWATCH_USERNAME / _PASSWORD  initial admin account
+#      - LETSWATCH_INTERNAL_TOKEN, LETSWATCH_STREAM_TOKEN_SECRET,
+#        LETSWATCH_FRONTEND_SESSION_SECRET   (openssl rand -base64 32)
+#      - LETSWATCH_LICENSE_ID / LETSWATCH_LICENSE_ACTIVATION_SECRET
+
+# 3. Pull and start
+docker compose pull
+docker compose up -d
+```
+
+Then connect:
+
+- **Emby-compatible clients** → `http://<server-ip>:18081/emby`
+- **Admin UI** → `http://<server-ip>:18082`
+
+> [!NOTE]
+> License activation is online and binds to this host's `machine-id`. For production, pin image tags to a released version instead of `latest`, and place the published HTTP port behind a TLS-terminating reverse proxy.
+
+See [`.env.example`](./.env.example) for the full list of configuration options.
 
 ---
 
