@@ -55,20 +55,20 @@ LetsWatch is published as multi-architecture Docker images (`linux/amd64`, `linu
 git clone https://github.com/DanielHallx/LetsWatch.git
 cd LetsWatch
 
-# 2. Configure
-cp .env.example .env
-#    Edit .env and fill in every empty value:
-#      - LETSWATCH_MEDIA_PATH          your host media directory
-#      - LETSWATCH_POSTGRES_PASSWORD   strong DB password
-#      - LETSWATCH_USERNAME / _PASSWORD  initial admin account
-#      - LETSWATCH_INTERNAL_TOKEN, LETSWATCH_STREAM_TOKEN_SECRET,
-#        LETSWATCH_FRONTEND_SESSION_SECRET   (openssl rand -base64 32)
-#      - LETSWATCH_LICENSE_ID / LETSWATCH_LICENSE_ACTIVATION_SECRET
+# 2. Configure. setup.sh asks only for the values that are yours
+#    (media path, license id + activation secret, admin login) and
+#    auto-generates every random secret — no manual `openssl` needed.
+#    Run it in English or Chinese.
+./setup.sh
 
 # 3. Pull and start
 docker compose pull
 docker compose up -d
 ```
+
+Prefer to configure by hand? Copy `.env.example` to `.env` and fill in every
+empty value yourself; the file documents each one. `setup.sh` only writes the
+same `.env`, so the two paths are interchangeable.
 
 Then connect:
 

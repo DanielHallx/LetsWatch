@@ -71,7 +71,8 @@ services:
       LETSWATCH_REQUIRE_STREAM_TOKEN: ${LETSWATCH_REQUIRE_STREAM_TOKEN:-true}
       LETSWATCH_LICENSE_ID: ${LETSWATCH_LICENSE_ID:?set LETSWATCH_LICENSE_ID to the license id issued to you}
       LETSWATCH_LICENSE_ACTIVATION_SECRET: ${LETSWATCH_LICENSE_ACTIVATION_SECRET:?set LETSWATCH_LICENSE_ACTIVATION_SECRET to the activation secret issued to you}
-      LETSWATCH_LICENSE_CACHE_FILE: ${LETSWATCH_LICENSE_CACHE_FILE:-/app/data/license-cache.json}
+      # Persistent data directory (the named volume mounted at /app/data below).
+      LETSWATCH_DATA_DIR: ${LETSWATCH_DATA_DIR:-/app/data}
       LETSWATCH_MEDIA_ROOT: /srv/library
       LETSWATCH_SCAN_SOURCE: ${LETSWATCH_SCAN_SOURCE:-local}
       LETSWATCH_RCLONE_REMOTE: ${LETSWATCH_RCLONE_REMOTE:-}
@@ -86,6 +87,7 @@ services:
       # Host machine id is used to bind the license to this host.
       - /etc/machine-id:/etc/machine-id:ro
       - ${LETSWATCH_MEDIA_PATH:?set LETSWATCH_MEDIA_PATH to your host media directory}:/srv/library:ro
+      # Persistent application data and caches. Keep this volume.
       - letswatch-license-cache:/app/data
       - letswatch-nginx-logs:/var/log/nginx
     healthcheck:
