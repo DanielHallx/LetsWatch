@@ -174,3 +174,23 @@ echo
 echo "$(t "Next:" "下一步：")"
 echo "  docker compose pull"
 echo "  docker compose up -d"
+
+# --- how to reach the admin console ----------------------------------------
+
+ADMIN_PORT="$(get_val LETSWATCH_ADMIN_PORT)"
+ADMIN_PORT="${ADMIN_PORT:-18082}"
+ADMIN_USER="$(get_val LETSWATCH_USERNAME)"
+ADMIN_USER="${ADMIN_USER:-admin}"
+
+echo
+echo "$(t "Once the containers are up, open the admin console:" \
+          "容器启动后，访问管理后台：")"
+echo "  $(t "URL" "地址")      : http://<server-ip>:${ADMIN_PORT}"
+echo "  $(t "Username" "用户名") : ${ADMIN_USER}"
+if [ -n "$GENERATED_ADMIN_PASSWORD" ]; then
+  echo "  $(t "Password" "密码")   : $(t "the auto-generated one shown above" "上面自动生成的那串")"
+else
+  echo "  $(t "Password" "密码")   : $(t "the admin password you set" "你设置的管理员密码")"
+fi
+echo "$(t "Replace <server-ip> with this machine's IP or hostname (use 127.0.0.1 if local)." \
+          "把 <server-ip> 换成本机 IP 或域名（本机调试用 127.0.0.1）。")"
